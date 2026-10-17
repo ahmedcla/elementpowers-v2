@@ -22,31 +22,35 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
       with:
-        gradle-version: '8.10' # استخدمنا إصداراً مستقراً ومتوافقاً مع ماينكرافت
+        gradle-version: '8.10'
         validate-wrappers: false
 
-    # هذه الخطوة ستبحث عن مكان build.gradle وتدخل إليه تلقائياً
-    - name: Find Project and Build
+    - name: Build Mod
       run: |
-        # البحث عن ملف build.gradle في أي مجلد
-        PROJECT_DIR=$(find . -name "build.gradle" -not -path "*/\.*" | head -n 1 | xargs dirname)
+        echo "🔍 جاري البحث عن مجلد المشروع..."
         
-        if [ -z "$PROJECT_DIR" ]; then
-          echo "❌ خطأ: لم يتم العثور على ملف build.gradle في المستودع!"
-          echo "تأكد من رفع ملفات المشروع."
+        # البحث عن ملف build.gradle في أي مكان (حتى لو داخل مجلدات)
+        GRADLE_FILE=$(find . -name "build.gradle" | head -n 1)
+        
+        if [ -z "$GRADLE_FILE" ]; then
+          echo "❌ خطأ: لم يتم العثور على build.gradle في مستودعك."
+          echo "الملفات الموجودة حالياً:"
+          ls -la
           exit 1
         fi
         
-        echo "✅ تم العثور على المشروع في المجلد: $PROJECT_DIR"
-        cd "$PROJECT_DIR"
+        # استخراج مسار المجلد (طريقة آمنة لا تسبب خطأ dirname)
+        PROJECT_DIR=$(echo "$GRADLE_FILE" | xargs -I{} dirname {})
+        echo "✅ تم العثور على المشروع في: $PROJECT_DIR"
         
-        echo "جاري بناء المود..."
+        # الدخول للمجلد وبناء المود
+        cd "$PROJECT_DIR"
         gradle build --no-daemon
 
     - name: Upload Mod JAR
       uses: actions/upload-artifact@v4
       with:
         name: fabric-mod-jar
-        # البحث عن ملف الـ jar في أي مكان داخل مجلد build
+        # البحث عن ملف الجار في أي مكان
         path: '**/build/libs/*.jar'
         if-no-files-found: error
