@@ -3,39 +3,38 @@ name: Build Fabric Mod
 on:
   push:
     branches: [ "main", "master" ]
-  workflow_dispatch:
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # يسمح بالتشغيل اليدوي
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
 
-      - name: Unzip and Move Files
-        run: |
-          unzip Elp.zip
-          # البحث عن ملف gradlew ونقل كل المحتويات إلى المجلد الرئيسي
-          GRADLEW_PATH=$(find . -maxdepth 3 -name "gradlew" -type f)
-          TARGET_DIR=$(dirname "$GRADLEW_PATH")
-          echo "Found project at: $TARGET_DIR"
-          if [ "$TARGET_DIR" != "." ]; then
-            cp -r $TARGET_DIR/* .
-          fi
-          ls -la
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        # لا يوجد Wrapper، لذلك لا داعي للتحقق منه، ويمكن تعطيله
+        validate-wrappers: false
 
-      - name: Build Mod
-        run: |
-          chmod +x gradlew
-          ./gradlew build --no-daemon
+    - name: Build with Gradle
+      # لاحظ أنه لا يوجد ./gradlew هنا، بل يتم استخدام gradle مباشرة
+      run: gradle build --no-daemon
 
-      - name: Upload JAR Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: elementpowers-jar
-          path: '**/build/libs/*.jar'
+    - name: Upload Mod JAR
+      uses: actions/upload-artifact@v4
+      with:
+        name: fabric-mod-jar
+        # مسار الإخراج الافتراضي لـ Fabric Loom هو build/libs
+        path: build/libs/*.jar
+        if-no-files-found: error
