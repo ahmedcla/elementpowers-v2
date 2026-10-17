@@ -17,9 +17,16 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Unzip Project
+      - name: Unzip and Move Files
         run: |
           unzip Elp.zip
+          # البحث عن ملف gradlew ونقل كل المحتويات إلى المجلد الرئيسي
+          GRADLEW_PATH=$(find . -maxdepth 3 -name "gradlew" -type f)
+          TARGET_DIR=$(dirname "$GRADLEW_PATH")
+          echo "Found project at: $TARGET_DIR"
+          if [ "$TARGET_DIR" != "." ]; then
+            cp -r $TARGET_DIR/* .
+          fi
           ls -la
 
       - name: Build Mod
@@ -31,4 +38,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: elementpowers-jar
-          path: 'build/libs/*.jar'
+          path: '**/build/libs/*.jar'
