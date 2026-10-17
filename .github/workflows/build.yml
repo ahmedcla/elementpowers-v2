@@ -3,9 +3,7 @@ name: Build Fabric Mod
 on:
   push:
     branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
-  workflow_dispatch: # يسمح بالتشغيل اليدوي
+  workflow_dispatch:
 
 jobs:
   build:
@@ -24,17 +22,31 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
       with:
-        # لا يوجد Wrapper، لذلك لا داعي للتحقق منه، ويمكن تعطيله
+        gradle-version: '8.10' # استخدمنا إصداراً مستقراً ومتوافقاً مع ماينكرافت
         validate-wrappers: false
 
-    - name: Build with Gradle
-      # لاحظ أنه لا يوجد ./gradlew هنا، بل يتم استخدام gradle مباشرة
-      run: gradle build --no-daemon
+    # هذه الخطوة ستبحث عن مكان build.gradle وتدخل إليه تلقائياً
+    - name: Find Project and Build
+      run: |
+        # البحث عن ملف build.gradle في أي مجلد
+        PROJECT_DIR=$(find . -name "build.gradle" -not -path "*/\.*" | head -n 1 | xargs dirname)
+        
+        if [ -z "$PROJECT_DIR" ]; then
+          echo "❌ خطأ: لم يتم العثور على ملف build.gradle في المستودع!"
+          echo "تأكد من رفع ملفات المشروع."
+          exit 1
+        fi
+        
+        echo "✅ تم العثور على المشروع في المجلد: $PROJECT_DIR"
+        cd "$PROJECT_DIR"
+        
+        echo "جاري بناء المود..."
+        gradle build --no-daemon
 
     - name: Upload Mod JAR
       uses: actions/upload-artifact@v4
       with:
         name: fabric-mod-jar
-        # مسار الإخراج الافتراضي لـ Fabric Loom هو build/libs
-        path: build/libs/*.jar
+        # البحث عن ملف الـ jar في أي مكان داخل مجلد build
+        path: '**/build/libs/*.jar'
         if-no-files-found: error
